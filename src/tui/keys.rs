@@ -843,10 +843,8 @@ impl Widget for KeyGenWizardScreen {
                         w.algorithm_index -= 1;
                     }
                 }
-                KeyGenStep::Expiry => {
-                    if !w.editing_custom_expiry && w.expiry_index > 0 {
-                        w.expiry_index -= 1;
-                    }
+                KeyGenStep::Expiry if !w.editing_custom_expiry && w.expiry_index > 0 => {
+                    w.expiry_index -= 1;
                 }
                 _ => {}
             },
@@ -856,10 +854,8 @@ impl Widget for KeyGenWizardScreen {
                         w.algorithm_index += 1;
                     }
                 }
-                KeyGenStep::Expiry => {
-                    if !w.editing_custom_expiry && w.expiry_index < 3 {
-                        w.expiry_index += 1;
-                    }
+                KeyGenStep::Expiry if !w.editing_custom_expiry && w.expiry_index < 3 => {
+                    w.expiry_index += 1;
                 }
                 _ => {}
             },
@@ -986,13 +982,11 @@ impl Widget for KeyGenWizardScreen {
                     if let Some(id) = self.own_id.get() { ctx.request_recompose(id); }
                     return EventPropagation::Stop;
                 }
-                KeyCode::Tab => {
-                    if w.step == KeyGenStep::Identity {
-                        w.active_field = if w.active_field == 0 { 1 } else { 0 };
-                        drop(w);
-                        if let Some(id) = self.own_id.get() { ctx.request_recompose(id); }
-                        return EventPropagation::Stop;
-                    }
+                KeyCode::Tab if w.step == KeyGenStep::Identity => {
+                    w.active_field = if w.active_field == 0 { 1 } else { 0 };
+                    drop(w);
+                    if let Some(id) = self.own_id.get() { ctx.request_recompose(id); }
+                    return EventPropagation::Stop;
                 }
                 _ => {}
             }

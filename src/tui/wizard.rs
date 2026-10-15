@@ -715,11 +715,9 @@ impl Widget for SshTouchPolicyWizardScreen {
                 }
             }
 
-            "policy_down" => {
-                if policy_idx + 1 < TOUCH_POLICIES.len() && step == 0 {
-                    self.policy_idx.update(|i| *i += 1);
-                    if let Some(id) = self.own_id.get() { ctx.request_recompose(id); }
-                }
+            "policy_down" if policy_idx + 1 < TOUCH_POLICIES.len() && step == 0 => {
+                self.policy_idx.update(|i| *i += 1);
+                if let Some(id) = self.own_id.get() { ctx.request_recompose(id); }
             }
 
             _ => {}
