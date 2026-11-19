@@ -1,4 +1,4 @@
-//! PIV slot deletion — management key authentication (3DES) + certificate and key deletion APDUs.
+//! PIV slot deletion: management key authentication (3DES) + certificate and key deletion APDUs.
 //!
 //! This module provides targeted certificate and key deletion for individual PIV slots,
 //! using native PC/SC APDUs (no ykman). Requires management key authentication before
@@ -7,7 +7,7 @@
 //! Protocol summary:
 //! - Management key auth: GENERAL AUTHENTICATE (0x87) with 3DES-EDE challenge-response
 //! - Certificate delete: PUT DATA (0xDB) with empty 0x53 value
-//! - Key delete: MOVE KEY (0xF6) — firmware >= 5.7.0 ONLY
+//! - Key delete: MOVE KEY (0xF6): firmware >= 5.7.0 ONLY
 
 use anyhow::Result;
 use pcsc::{Context, Protocols, Scope, ShareMode};
@@ -37,13 +37,13 @@ pub const PIV_DEFAULT_MGMT_KEY_3DES: &[u8; 24] = &[
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[allow(dead_code)]
 pub enum PivSlot {
-    /// 9a — PIV Authentication
+    /// 9a: PIV Authentication
     Authentication,
-    /// 9c — Digital Signature
+    /// 9c: Digital Signature
     Signature,
-    /// 9d — Key Management
+    /// 9d: Key Management
     KeyManagement,
-    /// 9e — Card Authentication (no PIN required)
+    /// 9e: Card Authentication (no PIN required)
     CardAuth,
 }
 
@@ -100,11 +100,11 @@ impl PivSlot {
 ///
 /// Protocol (NIST SP 800-73-4 §3.2.4, INS=0x87, Algorithm=0x03 [3DES]):
 ///
-/// Step 1 — Request challenge:
+/// Step 1: Request challenge:
 ///   APDU: 00 87 03 9B 04 7C 02 81 00
 ///   Response layout: 7C 0A 81 08 [8 bytes challenge]
 ///
-/// Step 2 — Respond with encrypted challenge:
+/// Step 2: Respond with encrypted challenge:
 ///   Encrypt the 8-byte challenge with 3DES-EDE (ECB mode, single block).
 ///   APDU: 00 87 03 9B 0C 7C 0A 82 08 [8 bytes encrypted response]
 ///   SW 9000 = authenticated; 6982 = wrong key.
@@ -265,7 +265,7 @@ pub fn delete_piv_key(card: &pcsc::Card, slot: &PivSlot, firmware: &Version) -> 
 /// 3. SELECT PIV AID
 /// 4. Authenticate management key (3DES challenge-response)
 /// 5. DELETE certificate (PUT DATA with empty 0x53)
-/// 6. Attempt DELETE key (MOVE KEY) — skipped with explanation if firmware < 5.7
+/// 6. Attempt DELETE key (MOVE KEY): skipped with explanation if firmware < 5.7
 ///
 /// Returns a human-readable status string on success.
 #[allow(dead_code)]
@@ -407,7 +407,7 @@ pub fn change_piv_management_key(
 
     match sw {
         0x9000 => Ok(()),
-        0x6982 => Err(anyhow::anyhow!("Authentication failed — wrong current management key")),
+        0x6982 => Err(anyhow::anyhow!("Authentication failed: wrong current management key")),
         0x6A80 => Err(anyhow::anyhow!("Invalid management key (check length and format)")),
         other => Err(anyhow::anyhow!("SET MANAGEMENT KEY failed: SW {:04X}", other)),
     }
@@ -488,5 +488,16 @@ mod tests {
         let gated6 = fw6.major < 5 || (fw6.major == 5 && fw6.minor < 7);
         assert!(!gated57, "5.7.0 should be allowed");
         assert!(!gated6, "6.0.0 should be allowed");
+    }
+
+    /// Hardware test: needs a scratch YubiKey (5.4+) whose PIV management key is
+    /// AES192 with the default bytes, and a key in slot 9A. Destroys slot 9A.
+    /// Run: cargo test delete_with_aes_mgmt_key -- --ignored --nocapture
+    #[test]
+    #[ignore]
+    fn delete_with_aes_mgmt_key() {
+        let fw = Version { major: 5, minor: 4, patch: 3 };
+        let result = delete_piv_slot(&PivSlot::Authentication, PIV_DEFAULT_MGMT_KEY_3DES, &fw);
+        assert!(result.is_ok(), "delete failed: {:?}", result.err());
     }
 }
